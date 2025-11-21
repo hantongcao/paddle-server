@@ -12,16 +12,19 @@ import uvicorn
 # 添加项目根目录到Python路径
 sys.path.insert(0, str(Path(__file__).parent))
 
+# 导入配置
+from config.config import OCR_API_URL, SERVER_CONFIG, DEFAULT_LONGEST_SIDE
+
 def run_cli():
     """运行命令行模式"""
     from utils.utils import process_pdf_file
     
     parser = argparse.ArgumentParser(description='处理PDF文件并进行布局解析')
     parser.add_argument('pdf_path', help='PDF文件路径')
-    parser.add_argument('--api-url', default='http://192.168.48.236:8080/layout-parsing', 
+    parser.add_argument('--api-url', default=OCR_API_URL, 
                        help='布局解析API URL')
     parser.add_argument('--output-dir', default='output', help='输出目录')
-    parser.add_argument('--longest-side', type=int, default=1280, 
+    parser.add_argument('--longest-side', type=int, default=DEFAULT_LONGEST_SIDE, 
                        help='图像最长边像素大小')
     
     args = parser.parse_args()
@@ -65,17 +68,17 @@ def run_cli():
 def run_server():
     """运行FastAPI服务器"""
     print("启动PDF处理服务...")
-    print("服务地址: http://localhost:8000")
-    print("API文档: http://localhost:8000/docs")
-    print("健康检查: http://localhost:8000/health")
+    print(f"服务地址: http://{SERVER_CONFIG['host']}:{SERVER_CONFIG['port']}")
+    print(f"API文档: http://{SERVER_CONFIG['host']}:{SERVER_CONFIG['port']}/docs")
+    print(f"健康检查: http://{SERVER_CONFIG['host']}:{SERVER_CONFIG['port']}/health")
     print("-" * 50)
     
     uvicorn.run(
         "app:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=True,
-        log_level="info"
+        host=SERVER_CONFIG["host"],
+        port=SERVER_CONFIG["port"],
+        reload=SERVER_CONFIG["reload"],
+        log_level=SERVER_CONFIG["log_level"]
     )
 
 

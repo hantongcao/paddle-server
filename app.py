@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 import json
 import tempfile
 import os
+import asyncio
 from pathlib import Path
 import sys
 
@@ -15,6 +16,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent))
 
 from utils.utils import process_pdf_file
+from config.config import OCR_API_URL, DEFAULT_LONGEST_SIDE
 
 # 创建FastAPI应用
 app = FastAPI(
@@ -22,6 +24,9 @@ app = FastAPI(
     description="提供PDF文件处理和布局解析功能的API服务",
     version="1.0.0"
 )
+
+# 信号量控制 - 限制PDF处理为单并发
+processing_semaphore = asyncio.Semaphore(1)
 
 @app.get("/health")
 async def health_check():
@@ -54,14 +59,32 @@ async def process_pdf(
     Returns:
         JSON格式的解析结果，包含每页的markdown内容
     """
-    # 检查文件类型
-    if not file.filename.lower().endswith('.pdf'):
+    # 检查并发控制 - 如果信号量被占用，返回429状态码
+    if not processing_semaphore.locked():
+        try:
+            # 尝试获取信号量，设置超时时间为0
+            await asyncio.wait_for(processing_semaphore.acquire(), timeout=0)
+        except asyncio.TimeoutError:
+            # 信号量已被占用，返回429 Too Many Requests
+            raise HTTPException(
+                status_code=429,
+                detail="系统繁忙，请稍后再试。当前仅支持单并发处理。"
+            )
+    else:
+        # 信号量已被占用，返回429 Too Many Requests
         raise HTTPException(
-            status_code=400, 
-            detail="仅支持PDF文件"
+            status_code=429,
+            detail="系统繁忙，请稍后再试。当前仅支持单并发处理。"
         )
     
     try:
+        # 检查文件类型
+        if not file.filename.lower().endswith('.pdf'):
+            raise HTTPException(
+                status_code=400, 
+                detail="仅支持PDF文件"
+            )
+        
         # 读取上传的文件内容
         file_content = await file.read()
         
@@ -101,6 +124,9 @@ async def process_pdf(
             status_code=500, 
             detail=f"处理PDF文件时发生错误: {str(e)}"
         )
+    finally:
+        # 释放信号量
+        processing_semaphore.release()
 
 @app.get("/")
 async def root():
