@@ -183,7 +183,7 @@ def extract_markdown_from_result(result):
     
     return markdown_dict
 
-def process_pdf_file(pdf_input, api_url, longest_side=1280):
+def process_pdf_file(pdf_input, api_url, longest_side=DEFAULT_LONGEST_SIDE):
     """
     处理PDF文件：转换、调整大小、解析布局，直接返回markdown内容
     

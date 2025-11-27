@@ -10,7 +10,7 @@ API_CONFIG = {
 }
 
 # OCR服务配置
-OCR_API_URL = "http://192.168.48.236:8080/layout-parsing"
+OCR_API_URL = "http://192.168.48.180:7999/layout-parsing"
 
 # 服务器配置
 SERVER_CONFIG = {
